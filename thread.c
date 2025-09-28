@@ -324,15 +324,15 @@ thread_yield (void)
   intr_set_level (old_level);
 }
 
-//cmp function
+//cmp function: Checks whether thread a has a higher priority than thread b, returns True or False
 bool cmp_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED){
+  
+  // Get the threads a and b from the list entry
   struct thread *thread_a = list_entry(a, struct thread, elem);
   struct thread *thread_b = list_entry(b, struct thread, elem);
 
-  if(thread_a->priority > thread_b ->priority){
-    return true;
-  }
-  return false;
+  // Returns true if thread a had a priority greater than thread b, and false otherwise.
+  return(thread_a->priority > thread_b ->priority);
 }
 
 /* Invoke function 'func' on all threads, passing along 'aux'.
