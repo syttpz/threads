@@ -16,7 +16,7 @@ enum thread_status
     THREAD_BLOCKED,     /* Waiting for an event to trigger. */
     THREAD_DYING        /* About to be destroyed. */
   };
-
+// test
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
 typedef int tid_t;

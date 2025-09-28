@@ -201,7 +201,7 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
-  //check if the priority of the created thread is higher than the priority of the current thread and
+  //Lab 5: check if the priority of the created thread is higher than the priority of the current thread and
   //if so, call thread yield()
   if(t->priority > thread_current()->priority){
     thread_yield();
@@ -324,11 +324,14 @@ thread_yield (void)
   intr_set_level (old_level);
 }
 
-//cmp function
+//cmp function: Checks whether thread a has a higher priority than thread b, returns True or False
 bool cmp_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED){
+  
+  // Get the threads a and b from the list entry
   struct thread *thread_a = list_entry(a, struct thread, elem);
   struct thread *thread_b = list_entry(b, struct thread, elem);
 
+  // Returns true if thread a had a priority greater than thread b, and false otherwise.
   if(thread_a->priority > thread_b ->priority){
     return true;
   }else if(thread_a->priority == thread_b ->priority){
