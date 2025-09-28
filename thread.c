@@ -331,7 +331,7 @@ bool cmp_priority(const struct list_elem *a, const struct list_elem *b, void *au
   struct thread *thread_a = list_entry(a, struct thread, elem);
   struct thread *thread_b = list_entry(b, struct thread, elem);
 
-  // Returns true if thread a had a priority greater than thread b, and false otherwise.
+  // Returns true if thread a had a priority greater than thread b, and false if they had equal priority, and false otherwise.
   if(thread_a->priority > thread_b ->priority){
     return true;
   }else if(thread_a->priority == thread_b ->priority){
