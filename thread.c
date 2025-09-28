@@ -331,8 +331,11 @@ bool cmp_priority(const struct list_elem *a, const struct list_elem *b, void *au
 
   if(thread_a->priority > thread_b ->priority){
     return true;
+  }else if(thread_a->priority == thread_b ->priority){
+    return false;
   }
   return false;
+   
 }
 
 /* Invoke function 'func' on all threads, passing along 'aux'.
@@ -360,7 +363,8 @@ thread_set_priority (int new_priority)
   //first element has the highest priority
    
   if(!list_empty(&ready_list)){
-    struct thread *thread_h = list_entry(&(ready_list.head), struct thread, elem);
+    //struct thread *thread_h = list_entry(&(ready_list.head), struct thread, elem);
+    struct thread *thread_h = list_entry(list_front(&ready_list), struct thread, elem);
     if(thread_get_priority() < thread_h->priority){
       thread_yield();
     }
