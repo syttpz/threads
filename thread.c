@@ -368,7 +368,8 @@ thread_set_priority (int new_priority)
   // Lab 5: Ensures that the function works with a list that is not empty
   if(!list_empty(&ready_list)){
     // Get the thread from the list entry
-    struct thread *thread_h = list_entry(&(ready_list.head), struct thread, elem);
+    //struct thread *thread_h = list_entry(&(ready_list.head), struct thread, elem);
+    struct thread *thread_h = list_entry(list_front(&ready_list), struct thread, elem);
     
     // If the current thread has a lower priority that the first thread in the list (which is also the thread with the highest priority), then the current thread should yield, allowing the thread with the higher priority in the list to be used.
     if(thread_get_priority() < thread_h->priority){
