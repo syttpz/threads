@@ -201,7 +201,7 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
-  //check if the priority of the created thread is higher than the priority of the current thread and
+  //Lab 5: check if the priority of the created thread is higher than the priority of the current thread and
   //if so, call thread yield()
   if(t->priority > thread_current()->priority){
     thread_yield();
