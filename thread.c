@@ -365,7 +365,7 @@ thread_set_priority (int new_priority)
   thread_current ()->priority = new_priority;
   //first element has the highest priority
   
-  // Ensures that the function works with a list that is not empty
+  // Lab 5: Ensures that the function works with a list that is not empty
   if(!list_empty(&ready_list)){
     // Get the thread from the list entry
     struct thread *thread_h = list_entry(&(ready_list.head), struct thread, elem);
@@ -383,6 +383,7 @@ int
 thread_get_priority (void) 
 {
   //return thread_current ()->priority;
+  // Lab 5: returns the priority of the currently running thread
   return running_thread() ->priority;
 }
 
