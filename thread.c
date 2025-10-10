@@ -11,6 +11,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -92,6 +93,13 @@ static tid_t allocate_tid (void);
 void
 thread_init (void) 
 {
+  // Lab 6 - Task 1: set the load_avg to 0 when the MLFQS scheduling is enabled.
+  // if (thread_mlfqs) {
+  load_avg = 0;
+  // }
+
+
+
   ASSERT (intr_get_level () == INTR_OFF);
 
   lock_init (&tid_lock);
@@ -468,10 +476,11 @@ thread_get_load_avg (void)
 int
 thread_get_recent_cpu (void) 
 {
-  /* Not yet implemented. */
-  return  tointround(mulin(thread_current()->recent_cpu, 100));
+  // Lab 6 - Task 3: Returns the 100 times the current thread's recent_cpu value
+  return tointround(mulin(thread_current()->recent_cpu, 100));
 }
-
+
+
 /* Idle thread.  Executes when no other thread is ready to run.
 
    The idle thread is initially put on the ready list by
