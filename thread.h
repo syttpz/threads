@@ -5,6 +5,9 @@
 #include <list.h>
 #include <stdint.h>
 
+//lab 5 - less func prototype
+bool cmp_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -13,7 +16,7 @@ enum thread_status
     THREAD_BLOCKED,     /* Waiting for an event to trigger. */
     THREAD_DYING        /* About to be destroyed. */
   };
-
+// test
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
 typedef int tid_t;
@@ -92,8 +95,10 @@ struct thread
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
-    struct list_elem sleep_elem;        /* List element for sleeping list.*/
-    int64_t wakeup_time;
+
+    // Lab 6 - Task 1: Define nice and recent_cpu for 
+    int nice;
+    int recent_cpu;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -102,6 +107,9 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
+
+    /* Lab4 Implementation*/
+    int64_t wakeup_time; //In seconds
   };
 
 /* If false (default), use round-robin scheduler.
