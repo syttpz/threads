@@ -99,9 +99,9 @@ void
 thread_init (void) 
 {
   // Lab 6 - Task 1: set the load_avg to 0 when the MLFQS scheduling is enabled.
-  if (thread_mlfqs) {
-    load_avg = 0;
-  }
+  // if (thread_mlfqs) {
+  load_avg = 0;
+  // }
 
 
 
