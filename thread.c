@@ -15,6 +15,11 @@
 #include "userprog/process.h"
 #endif
 
+//lab 6
+#include "fxpt.h"
+int load_avg;
+
+
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
    of thread.h for details. */
@@ -93,6 +98,9 @@ thread_init (void)
   list_init (&ready_list);
   list_init (&all_list);
 
+  //lab 6
+  load_avg = tofxpt(0);
+
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
@@ -117,10 +125,23 @@ thread_start (void)
   sema_down (&idle_started);
 }
 
+
+//Lab 6 thread_calculate helper
+static void recent_cpu_update(struct thread* t, void *aux){
+  if(t == idle_thread) return;
+  int two_load_avg = mulin(load_avg, 2);
+  t->recent_cpu = addin(mulfx(divfx(two_load_avg, addin(two_load_avg, 1)), t->recent_cpu), t->nice); 
+}
+
+static void set_new_prio(struct thread* t, void *aux){
+  if(t == idle_thread) return;
+  t->priority = PRI_MAX - tointfloor(divfx(t->recent_cpu, tofxpt(4))) - (2 * t->nice);
+}
+
 /* Called by the timer interrupt handler at each timer tick.
    Thus, this function runs in an external interrupt context. */
 void
-thread_tick (void) 
+thread_tick (int64_t tick) 
 {
   struct thread *t = thread_current ();
 
@@ -131,13 +152,34 @@ thread_tick (void)
   else if (t->pagedir != NULL)
     user_ticks++;
 #endif
-  else
+  else{
     kernel_ticks++;
+  }
+
+  //lab 6, if the thread is not the idle thread, increment recent cpu by 1, in fixed point representation
+  if(t != idle_thread)
+    t->recent_cpu = addin(t->recent_cpu, 1);
 
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
+
+  //update load_avg by its formula, get current count of 'ready_threads'
+  if(tick % 100 == 0){
+    int ready_threads_num = list_size(&ready_list) + ((t != idle_thread) ? 1 : 0);
+    load_avg = addfx(mulfx(divfx(tofxpt(59), tofxpt(60)), load_avg), divfx(tofxpt(ready_threads_num), tofxpt(60)));
+
+    //Iterate over all threads (running, ready, blocked) and update their recent cpu value using its formula.
+    thread_foreach(recent_cpu_update, NULL);
+  } 
+  //Iterate over all threads, recalculate priority based on the new "recent_cpu" and "ncie_value"
+  if(tick % 4 == 0){
+    thread_foreach(set_new_prio, NULL);
+  }
 }
+
+
+
 
 /* Prints thread statistics. */
 void
@@ -362,6 +404,10 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
+
+  //Lab 5: Disable interrupt
+  enum intr_level old_level = intr_disable();
+
   thread_current ()->priority = new_priority;
   //first element has the highest priority
   
@@ -375,6 +421,10 @@ thread_set_priority (int new_priority)
     if(thread_get_priority() < thread_h->priority){
       thread_yield();
     }
+
+     
+  //Lab 5: Disable interrupt
+  intr_set_level (old_level);
   }
    
 }
@@ -393,6 +443,9 @@ void
 thread_set_nice (int nice UNUSED) 
 {
   /* Not yet implemented. */
+  thread_current()->nice = nice;
+
+  
 }
 
 /* Returns the current thread's nice value. */
@@ -400,7 +453,7 @@ int
 thread_get_nice (void) 
 {
   /* Not yet implemented. */
-  return 0;
+  return thread_current()->nice;
 }
 
 /* Returns 100 times the system load average. */
@@ -408,7 +461,7 @@ int
 thread_get_load_avg (void) 
 {
   /* Not yet implemented. */
-  return 0;
+  return tointround(mulin(load_avg, 100));
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
@@ -416,7 +469,7 @@ int
 thread_get_recent_cpu (void) 
 {
   /* Not yet implemented. */
-  return 0;
+  return  tointround(mulin(thread_current()->recent_cpu, 100));
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -506,6 +559,22 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
+
+
+
+  //lab 6
+  if(strcmp(name, "main") == 0){
+    t->nice = 0;
+    t->recent_cpu = 0;
+  }else{
+    //other threads must inherit nice and recent_cpu from its parent (current thread)
+    t->nice = running_thread()->nice;
+    t->recent_cpu = running_thread() -> recent_cpu;
+  }
+  //load_avg = tofxpt(0); //global_var
+
+  //fxpt first, then convert back to integer (round, nearest)
+  t->priority = PRI_MAX - tointround(divfx(t->recent_cpu, tofxpt(4))) - (2 * t->nice);
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);

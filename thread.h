@@ -96,6 +96,14 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
+    //lab 6
+    int nice;
+    int recent_cpu;
+
+    //Lab4
+    int64_t wakeup_time; //In seconds
+    
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -103,9 +111,6 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
-
-    /* Lab4 Implementation*/
-    int64_t wakeup_time; //In seconds
   };
 
 /* If false (default), use round-robin scheduler.
@@ -116,7 +121,7 @@ extern bool thread_mlfqs;
 void thread_init (void);
 void thread_start (void);
 
-void thread_tick (void);
+void thread_tick (int64_t tick);
 void thread_print_stats (void);
 
 typedef void thread_func (void *aux);
