@@ -96,7 +96,7 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
-    //lab 6
+    //lab 6: Added Members; nice and recent_cpu to the thread struct
     int nice;
     int recent_cpu;
 

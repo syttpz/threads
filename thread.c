@@ -16,8 +16,8 @@
 #include "userprog/process.h"
 #endif
 
-//lab 6
-#include "fxpt.h"
+//lab 6: Include the fxpt file, and define load_avg as a global variable
+#include "threads/fxpt.h"
 int load_avg;
 
 
@@ -93,12 +93,6 @@ static tid_t allocate_tid (void);
 void
 thread_init (void) 
 {
-  // Lab 6 - Task 1: set the load_avg to 0 when the MLFQS scheduling is enabled.
-  // if (thread_mlfqs) {
-  load_avg = 0;
-  // }
-
-
 
   ASSERT (intr_get_level () == INTR_OFF);
 
@@ -106,7 +100,7 @@ thread_init (void)
   list_init (&ready_list);
   list_init (&all_list);
 
-  //lab 6
+  // Lab 6 - Task 1: set the load_avg to 0 when the MLFQS scheduling is enabled.
   load_avg = tofxpt(0);
 
   /* Set up a thread structure for the running thread. */
@@ -164,25 +158,29 @@ thread_tick (int64_t tick)
     kernel_ticks++;
   }
 
-  //lab 6, if the thread is not the idle thread, increment recent cpu by 1, in fixed point representation
-  if(t != idle_thread)
-    t->recent_cpu = addin(t->recent_cpu, 1);
-
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
 
-  //update load_avg by its formula, get current count of 'ready_threads'
-  if(tick % 100 == 0){
-    int ready_threads_num = list_size(&ready_list) + ((t != idle_thread) ? 1 : 0);
-    load_avg = addfx(mulfx(divfx(tofxpt(59), tofxpt(60)), load_avg), divfx(tofxpt(ready_threads_num), tofxpt(60)));
 
-    //Iterate over all threads (running, ready, blocked) and update their recent cpu value using its formula.
-    thread_foreach(recent_cpu_update, NULL);
-  } 
-  //Iterate over all threads, recalculate priority based on the new "recent_cpu" and "ncie_value"
-  if(tick % 4 == 0){
-    thread_foreach(set_new_prio, NULL);
+  //lab 6 - Task 2
+  if (thread_mlfqs) {
+    // At Every Tick: If the thread is not the idle thread, increment recent cpu by 1, in fixed point representation
+    if(t != idle_thread)
+      t->recent_cpu = addin(t->recent_cpu, 1);
+
+    // At Every Second (or 100 Ticks): Update load_avg by its formula, get current count of 'ready_threads'
+    if(tick % 100 == 0){
+      int ready_threads_num = list_size(&ready_list) + ((t != idle_thread) ? 1 : 0);
+      load_avg = addfx(mulfx(divfx(tofxpt(59), tofxpt(60)), load_avg), divfx(tofxpt(ready_threads_num), tofxpt(60)));
+
+      //Iterate over all threads (running, ready, blocked) and update their recent cpu value using its formula.
+      thread_foreach(recent_cpu_update, NULL);
+    } 
+    // At Every 4 Ticks: Iterate over all threads, recalculate priority based on the new "recent_cpu" and "ncie_value"
+    if(tick % 4 == 0){
+      thread_foreach(set_new_prio, NULL);
+    }
   }
 }
 
@@ -446,21 +444,59 @@ thread_get_priority (void)
   return running_thread() ->priority;
 }
 
+
+// Lab 6 - Task 3: Implementing thread_set_nice, thread_get_nice, thread_get_load_avg, thread_get_recent_cpu
+
 /* Sets the current thread's nice value to NICE. */
 void
 thread_set_nice (int nice UNUSED) 
 {
-  /* Not yet implemented. */
+
+  // Set the current thread's nice value to nice.
   thread_current()->nice = nice;
 
-  
+ // Since we are changing the thread's 'nice' value, the priority must be immediately recalculated and if the current thread is no longer the highest-priority thread, it must yield the CPU
+  struct thread *cur = thread_current ();
+  enum intr_level old_level;
+
+  // Disable Interrupts
+  ASSERT (!intr_context ());
+  old_level = intr_disable ();
+
+  // If the current thread is not idle
+  if (cur != idle_thread) {
+    /* Recalculate the current thread's priority using MLFQS formula */
+    int Computed_priority = PRI_MAX - tointround(divin(cur->recent_cpu,4)) - (cur->nice * 2);
+
+    /* Limit priority to valid range (from PRI_MIN upto PRI_MAX) */
+    if (Computed_priority > PRI_MAX) {
+      cur->priority = PRI_MAX;
+    }
+    else if (Computed_priority < PRI_MIN) {
+      cur->priority = PRI_MIN;
+    }
+    else {
+      cur->priority = Computed_priority;
+    }
+  }
+
+  // If the current thread is no longer the highest-priority thread, it should yield
+  if(!list_empty(&ready_list)) {
+    // Get the thread at the beginning/head of the list
+    struct thread *thread_h = list_entry(list_front(&ready_list), struct thread, elem);
+    // If the curret thread's priority is less than the current header's priority, it should yield.
+    if (cur->priority < thread_h->priority) {
+      thread_yield();
+    }
+  }
+  intr_set_level (old_level);
 }
+
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
 {
-  /* Not yet implemented. */
   return thread_current()->nice;
 }
 
@@ -468,7 +504,6 @@ thread_get_nice (void)
 int
 thread_get_load_avg (void) 
 {
-  /* Not yet implemented. */
   return tointround(mulin(load_avg, 100));
 }
 
@@ -476,7 +511,7 @@ thread_get_load_avg (void)
 int
 thread_get_recent_cpu (void) 
 {
-  // Lab 6 - Task 3: Returns the 100 times the current thread's recent_cpu value
+  // Returns the 100 times the current thread's recent_cpu value
   return tointround(mulin(thread_current()->recent_cpu, 100));
 }
 
@@ -566,24 +601,38 @@ init_thread (struct thread *t, const char *name, int priority)
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
-  t->priority = priority;
   t->magic = THREAD_MAGIC;
 
+  //lab 6 - Task 1
+  if (thread_mlfqs) {
+    if(strcmp(name, "main") == 0){
+      t->nice = 0;
+      t->recent_cpu = 0;
+    }
+    else {
+      //other threads must inherit nice and recent_cpu from its parent (current thread)
+      t->nice = running_thread()->nice;
+      t->recent_cpu = running_thread() -> recent_cpu;
+    }
+    //load_avg = tofxpt(0); //global_var
 
-
-  //lab 6
-  if(strcmp(name, "main") == 0){
-    t->nice = 0;
-    t->recent_cpu = 0;
-  }else{
-    //other threads must inherit nice and recent_cpu from its parent (current thread)
-    t->nice = running_thread()->nice;
-    t->recent_cpu = running_thread() -> recent_cpu;
+    // Compute the priority, fxpt first, then convert back to integer (round, nearest)
+    int Computed_Priority = PRI_MAX - tointround(divfx(t->recent_cpu, tofxpt(4))) - (2 * t->nice);
+    
+    // Ensure the priority is restricted [PRI_MIN, PRI_MAX]
+    if (Computed_Priority > PRI_MAX) {
+      t->priority = PRI_MAX;
+    }
+    else if (Computed_Priority < PRI_MIN) {
+      t->priority = PRI_MIN;
+    }
+    else {
+      t->priority = Computed_Priority;
+    }
   }
-  //load_avg = tofxpt(0); //global_var
-
-  //fxpt first, then convert back to integer (round, nearest)
-  t->priority = PRI_MAX - tointround(divfx(t->recent_cpu, tofxpt(4))) - (2 * t->nice);
+  else {
+    t->priority = priority;
+  }
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
